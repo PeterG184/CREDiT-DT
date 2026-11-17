@@ -1,0 +1,72 @@
+name: credit-dt
+
+networks:
+  credit-net:
+    driver: bridge
+
+volumes:
+  timescale_data:
+
+services:
+  db:
+    image: timescale/timescaledb-ha:pg16
+    container_name: credit-dt-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: credit_dt
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./database/raw:/docker-entrypoint-initdb.d:ro
+      - timescale_data:/home/postgres/pgdata/data
+    ports:
+      - "5432:5432"
+    networks:
+      - credit-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d credit_dt"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  migration-runner:
+    image: amacneil/dbmate:2.11
+    container_name: credit-dt-migrations
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://app_user:app_secure_password@db:5432/credit_dt?sslmode=disable
+    volumes:
+      - ./database/migrations:/db/migrations
+    networks:
+      - credit-net
+    depends_on:
+      db:
+        condition: service_healthy
+    command: up
+
+  backend-api:
+    build:
+      context: .
+      dockerfile: backend/api/Dockerfile
+      args:
+        SITE_TARGET: ${SITE_TARGET:-zambia}
+    image: credit-backend-api:${SITE_TARGET:-zambia}
+    container_name: credit-dt-api
+    restart: unless-stopped
+    environment:
+      SITE_TARGET: ${SITE_TARGET:-zambia}
+      DATABASE_URL: postgres://app_user:app_secure_password@db:5432/credit_dt?sslmode=disable
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    networks:
+      - credit-net
+    depends_on:
+      migration-runner:
+        condition: service_completed_successfully
+    profiles:
+      - zambia
+      - malawi
+      - kenya
+

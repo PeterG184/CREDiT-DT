@@ -1,0 +1,83 @@
+{
+  "site_id": "zambia",
+  "site_name": "Zambia Solar Microgrid",
+  "country": "Zambia",
+  "timezone": "Africa/Lusaka",
+  "coordinates": {
+    "latitude": -15.3875,
+    "longitude": 28.3228
+  },
+  "description": "Rural solar microgrid installation powering high-power loads including hammer mills, water pumps, school dormitories, and commercial bakery.",
+  "hardware_profile": {
+    "generation": {
+      "type": "solar_pv",
+      "capacity_kw": 50.0,
+      "storage_type": "bess",
+      "storage_capacity_kwh": 120.0
+    },
+    "loads": [
+      {
+        "id": "hammer_mill_1",
+        "name": "Primary Hammer Mill",
+        "category": "milling",
+        "nominal_power_kw": 15.0,
+        "priority": "flexible"
+      },
+      {
+        "id": "hammer_mill_2",
+        "name": "Secondary Hammer Mill",
+        "category": "milling",
+        "nominal_power_kw": 15.0,
+        "priority": "flexible"
+      },
+      {
+        "id": "water_pump_primary",
+        "name": "Borehole Water Pump",
+        "category": "water_supply",
+        "nominal_power_kw": 7.5,
+        "priority": "high"
+      },
+      {
+        "id": "dormitories",
+        "name": "Student Dormitories",
+        "category": "residential",
+        "nominal_power_kw": 5.0,
+        "priority": "critical"
+      },
+      {
+        "id": "bakery",
+        "name": "Community Bakery",
+        "category": "commercial",
+        "nominal_power_kw": 10.0,
+        "priority": "medium"
+      }
+    ]
+  },
+  "expected_raw_metric_keys": [
+    "timestamp",
+    "voltage_v",
+    "current_a",
+    "active_power_kw",
+    "reactive_power_kvar",
+    "frequency_hz",
+    "battery_soc_pct",
+    "battery_temp_c",
+    "solar_irradiance_wm2",
+    "ambient_temp_c"
+  ],
+  "active_features": {
+    "realtime_telemetry": true,
+    "load_monitoring": true,
+    "forecasting": true,
+    "digital_twin_3d": false,
+    "alerts": true
+  },
+  "models": [],
+  "api_base_url": "/api",
+  "mobile": {
+    "display_name": "CREDiT DT Zambia",
+    "ios_bundle_identifier": "org.credit.digitaltwin.zambia",
+    "android_package_name": "org.credit.digitaltwin.zambia"
+  }
+}
+

@@ -1,0 +1,62 @@
+name: credit-dt-prod
+
+# =============================================================================
+# Production Orchestration for Dedicated Site Server
+# =============================================================================
+# Notes:
+# 1. No database container: PostgreSQL + TimescaleDB is installed on host OS.
+# 2. Containers connect to host database via host.docker.internal (host-gateway).
+# 3. backend-api binds strictly to 127.0.0.1:4000 for host Nginx reverse proxying.
+# =============================================================================
+
+networks:
+  credit-prod-net:
+    driver: bridge
+
+services:
+  migration-runner:
+    image: amacneil/dbmate:2.11
+    container_name: credit-dt-prod-migrations
+    restart: "no"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    volumes:
+      - ./database/migrations:/db/migrations:ro
+    networks:
+      - credit-prod-net
+    command: up
+    profiles:
+      - zambia
+      - malawi
+      - kenya
+
+  backend-api:
+    build:
+      context: .
+      dockerfile: backend/api/Dockerfile
+      args:
+        SITE_TARGET: ${SITE_TARGET}
+    image: credit-backend-api:${SITE_TARGET}
+    container_name: credit-dt-prod-api
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      SITE_TARGET: ${SITE_TARGET}
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: 4000
+    ports:
+      # Binds strictly to host localhost so public traffic passes through Nginx
+      - "127.0.0.1:4000:4000"
+    networks:
+      - credit-prod-net
+    depends_on:
+      migration-runner:
+        condition: service_completed_successfully
+    profiles:
+      - zambia
+      - malawi
+      - kenya
+

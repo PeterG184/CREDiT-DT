@@ -1,0 +1,58 @@
+{
+  "site_id": "malawi",
+  "site_name": "Malawi Solar Microgrid",
+  "country": "Malawi",
+  "timezone": "Africa/Blantyre",
+  "coordinates": {
+    "latitude": -13.9626,
+    "longitude": 33.7741
+  },
+  "description": "Planned solar microgrid installation for Malawi site (Phase 2 rollout).",
+  "hardware_profile": {
+    "generation": {
+      "type": "solar_pv",
+      "capacity_kw": 40.0,
+      "storage_type": "bess",
+      "storage_capacity_kwh": 90.0
+    },
+    "loads": [
+      {
+        "id": "irrigation_pump",
+        "name": "Community Irrigation Pump",
+        "category": "agriculture",
+        "nominal_power_kw": 10.0,
+        "priority": "high"
+      },
+      {
+        "id": "health_post",
+        "name": "Rural Health Clinic",
+        "category": "healthcare",
+        "nominal_power_kw": 4.0,
+        "priority": "critical"
+      }
+    ]
+  },
+  "expected_raw_metric_keys": [
+    "timestamp",
+    "voltage_v",
+    "current_a",
+    "active_power_kw",
+    "frequency_hz",
+    "battery_soc_pct"
+  ],
+  "active_features": {
+    "realtime_telemetry": true,
+    "load_monitoring": true,
+    "forecasting": false,
+    "digital_twin_3d": false,
+    "alerts": true
+  },
+  "models": [],
+  "api_base_url": "/api",
+  "mobile": {
+    "display_name": "CREDiT DT Malawi",
+    "ios_bundle_identifier": "org.credit.digitaltwin.malawi",
+    "android_package_name": "org.credit.digitaltwin.malawi"
+  }
+}
+

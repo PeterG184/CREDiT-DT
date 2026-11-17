@@ -1,0 +1,58 @@
+{
+  "site_id": "kenya",
+  "site_name": "Kenya Solar Microgrid",
+  "country": "Kenya",
+  "timezone": "Africa/Nairobi",
+  "coordinates": {
+    "latitude": -0.0236,
+    "longitude": 37.9062
+  },
+  "description": "Planned solar microgrid installation for Kenya site (Phase 3 rollout).",
+  "hardware_profile": {
+    "generation": {
+      "type": "solar_pv",
+      "capacity_kw": 60.0,
+      "storage_type": "bess",
+      "storage_capacity_kwh": 150.0
+    },
+    "loads": [
+      {
+        "id": "cold_storage",
+        "name": "Produce Cold Storage Facility",
+        "category": "agriculture",
+        "nominal_power_kw": 18.0,
+        "priority": "critical"
+      },
+      {
+        "id": "water_purification",
+        "name": "Water Purification Plant",
+        "category": "utility",
+        "nominal_power_kw": 8.0,
+        "priority": "high"
+      }
+    ]
+  },
+  "expected_raw_metric_keys": [
+    "timestamp",
+    "voltage_v",
+    "current_a",
+    "active_power_kw",
+    "frequency_hz",
+    "battery_soc_pct"
+  ],
+  "active_features": {
+    "realtime_telemetry": true,
+    "load_monitoring": true,
+    "forecasting": false,
+    "digital_twin_3d": false,
+    "alerts": true
+  },
+  "models": [],
+  "api_base_url": "/api",
+  "mobile": {
+    "display_name": "CREDiT DT Kenya",
+    "ios_bundle_identifier": "org.credit.digitaltwin.kenya",
+    "android_package_name": "org.credit.digitaltwin.kenya"
+  }
+}
+

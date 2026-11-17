@@ -1,0 +1,120 @@
+name: Database CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - prod
+    paths:
+      - 'database/**'
+      - '.github/workflows/ci-database.yml'
+
+jobs:
+  verify-database-rules:
+    name: Verify Database Rules & Permissions
+    runs-on: ubuntu-latest
+
+    services:
+      timescale:
+        image: timescale/timescaledb-ha:pg16
+        env:
+          POSTGRES_DB: credit_dt
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d credit_dt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------------
+      # STEP 1: RAW SCHEMA IMMUTABILITY GUARD
+      # NOTICE FOR LEAD DEVELOPER:
+      # Uncomment the step below once the production raw table definitions
+      # have been committed to database/raw/.
+      # -----------------------------------------------------------------------
+      # - name: Verify database/raw/ Immutability
+      #   run: |
+      #     echo "Verifying no files in database/raw/ were modified..."
+      #     CHANGED_RAW_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD -- database/raw/)
+      #     if [ -n "$CHANGED_RAW_FILES" ]; then
+      #       echo "::error::Direct modification of database/raw/ is strictly forbidden!"
+      #       echo "Changed files: $CHANGED_RAW_FILES"
+      #       exit 1
+      #     fi
+      #     echo "[PASS] database/raw/ immutability verified."
+
+      # -----------------------------------------------------------------------
+      # STEP 2: STATIC MIGRATION GUARD (ACTIVE)
+      # Scans database/migrations/ for any statements touching the raw schema.
+      # -----------------------------------------------------------------------
+      - name: Static Migration Guard (Prevent raw schema mutations)
+        run: |
+          echo "Scanning database/migrations/ for illegal raw schema modifications..."
+          VIOLATIONS=$(grep -iEn '\b(create|alter|drop|insert|update|delete)\b.*(\braw\.)' database/migrations/*.sql || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::Migrations must never modify the raw schema! Found violations:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "[PASS] No illegal raw schema modifications found in migrations."
+
+      # -----------------------------------------------------------------------
+      # STEP 3: INITIALIZE RAW SCHEMA AS SUPERUSER
+      # -----------------------------------------------------------------------
+      - name: Initialize Raw Schema and App Roles
+        run: |
+          echo "Applying raw schema initialization as superuser..."
+          PGPASSWORD=postgres psql -h localhost -U postgres -d credit_dt -f database/raw/01_init_schemas_and_roles.sql
+          echo "[PASS] Raw schema and app_user role initialized."
+
+      # -----------------------------------------------------------------------
+      # STEP 4: APPLY APP MIGRATIONS USING RESTRICTED APP_USER ROLE
+      # -----------------------------------------------------------------------
+      - name: Apply App Migrations with dbmate (as app_user)
+        run: |
+          echo "Running dbmate migrations as app_user..."
+          docker run --rm \
+            --network host \
+            -v "$PWD/database/migrations:/db/migrations" \
+            -e DATABASE_URL="postgres://app_user:app_secure_password@127.0.0.1:5432/credit_dt?sslmode=disable" \
+            amacneil/dbmate:2.11 up
+          echo "[PASS] Database migrations applied cleanly by app_user."
+
+      # -----------------------------------------------------------------------
+      # STEP 5: PERMISSION SMOKE TEST (ACTIVE)
+      # Verifies SELECT works on raw, while INSERT/ALTER on raw fails.
+      # -----------------------------------------------------------------------
+      - name: Database Permission Smoke Test
+        run: |
+          echo "Testing app_user SELECT on raw.telemetry_placeholder..."
+          PGPASSWORD=app_secure_password psql -h localhost -U app_user -d credit_dt -c "SELECT count(*) FROM raw.telemetry_placeholder;"
+
+          echo "Testing app_user cannot INSERT into raw.telemetry_placeholder..."
+          if PGPASSWORD=app_secure_password psql -h localhost -U app_user -d credit_dt -c "INSERT INTO raw.telemetry_placeholder (site_id) VALUES ('fail');" 2>/dev/null; then
+            echo "::error::app_user was unexpectedly permitted to INSERT into raw schema!"
+            exit 1
+          else
+            echo "[PASS] INSERT on raw was rejected as expected."
+          fi
+
+          echo "Testing app_user cannot ALTER raw table..."
+          if PGPASSWORD=app_secure_password psql -h localhost -U app_user -d credit_dt -c "ALTER TABLE raw.telemetry_placeholder ADD COLUMN bad_col int;" 2>/dev/null; then
+            echo "::error::app_user was unexpectedly permitted to ALTER raw schema!"
+            exit 1
+          else
+            echo "[PASS] ALTER on raw was rejected as expected."
+          fi
+
+          echo "Testing app_user can INSERT into app.digital_twin_state..."
+          PGPASSWORD=app_secure_password psql -h localhost -U app_user -d credit_dt -c "INSERT INTO app.digital_twin_state (site_id, state_data) VALUES ('zambia', '{\"test\": true}'::jsonb);"
+          echo "[PASS] app_user successfully wrote to app schema."
+

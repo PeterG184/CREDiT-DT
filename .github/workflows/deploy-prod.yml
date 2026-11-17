@@ -1,0 +1,70 @@
+name: Production Deployment
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  deploy-to-site:
+    name: Deploy (${{ matrix.site_target }})
+    runs-on: ubuntu-latest
+    environment: ${{ matrix.site_target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        site_target: [zambia, malawi, kenya]
+
+    steps:
+      - name: Check if Host Secret is Configured
+        id: check-config
+        run: |
+          if [ -z "${{ secrets.PROD_SERVER_HOST }}" ]; then
+            echo "::notice::Host secret not configured for ${{ matrix.site_target }}. Skipping deployment gracefully."
+            echo "configured=false" >> $GITHUB_OUTPUT
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure SSH Key
+        if: steps.check-config.outputs.configured == 'true'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Deploy to Dedicated Server via SSH
+        if: steps.check-config.outputs.configured == 'true'
+        env:
+          HOST: ${{ secrets.PROD_SERVER_HOST }}
+          USER: ${{ secrets.PROD_SERVER_USER || 'root' }}
+          PORT: ${{ secrets.PROD_SERVER_PORT || '22' }}
+          SITE_TARGET: ${{ matrix.site_target }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Connecting to dedicated server for ${{ matrix.site_target }} (${HOST})..."
+          
+          ssh -o StrictHostKeyChecking=no -p "${PORT}" "${USER}@${HOST}" "bash -s" << 'EOF'
+            set -e
+            cd /opt/digital-twin
+
+            # 1. Pull latest prod code
+            echo "--> Pulling latest prod branch..."
+            git fetch origin prod
+            git checkout prod
+            git pull origin prod
+
+            # 2. Write .env.production from secrets
+            echo "--> Writing .env.production..."
+            cat << ENVEOF > .env.production
+          SITE_TARGET=${{ matrix.site_target }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          ENVEOF
+            chmod 600 .env.production
+
+            # 3. Execute deploy script
+            echo "--> Executing deploy/deploy.sh..."
+            ./deploy/deploy.sh
+          EOF
+
+          echo "[SUCCESS] Dedicated server deployment completed for ${{ matrix.site_target }}."
+

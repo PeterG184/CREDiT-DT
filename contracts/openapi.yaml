@@ -1,0 +1,135 @@
+openapi: 3.0.3
+info:
+  title: Digital Twin Cloud Platform API
+  version: 1.0.0
+  description: >
+    Language-agnostic API contract for the Digital Twin Cloud Platform.
+    Defines endpoints exposed by backend/api, consumed by the Expo frontend and internal services.
+servers:
+  - url: http://localhost:4000
+    description: Local development backend
+  - url: /api
+    description: Dedicated site server production reverse proxy
+
+paths:
+  /health:
+    get:
+      summary: Service Health Check
+      description: Returns service status, active SITE_TARGET, and database connectivity.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy and database is connected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy or database connection failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/site:
+    get:
+      summary: Active Site Metadata
+      description: Returns the resolved site configuration and hardware profile for the active SITE_TARGET.
+      operationId: getActiveSite
+      responses:
+        '200':
+          description: Active site manifest details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteManifest'
+        '404':
+          description: Site manifest not found.
+
+  /api/twin/state:
+    get:
+      summary: Latest Digital Twin State
+      description: Returns the most recent operational state for the active site.
+      operationId: getTwinState
+      responses:
+        '200':
+          description: Latest digital twin state record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TwinStateResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - site_target
+        - timestamp
+        - database_connected
+      properties:
+        status:
+          type: string
+          example: healthy
+        site_target:
+          type: string
+          example: zambia
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-11-17T12:00:00Z'
+        database_connected:
+          type: boolean
+          example: true
+        raw_schema_readable:
+          type: boolean
+          example: true
+        version:
+          type: string
+          example: '1.0.0'
+
+    SiteManifest:
+      type: object
+      required:
+        - site_id
+        - site_name
+        - country
+      properties:
+        site_id:
+          type: string
+          example: zambia
+        site_name:
+          type: string
+          example: Zambia Solar Microgrid
+        country:
+          type: string
+          example: Zambia
+        hardware_profile:
+          type: object
+          additionalProperties: true
+        expected_raw_metric_keys:
+          type: array
+          items:
+            type: string
+        active_features:
+          type: object
+          additionalProperties: true
+
+    TwinStateResponse:
+      type: object
+      required:
+        - site_id
+        - recorded_at
+        - state_data
+      properties:
+        site_id:
+          type: string
+          example: zambia
+        recorded_at:
+          type: string
+          format: date-time
+        state_data:
+          type: object
+          additionalProperties: true
+

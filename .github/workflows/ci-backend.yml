@@ -1,0 +1,78 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - prod
+    paths:
+      - 'backend/**'
+      - 'config/sites/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/ci-backend.yml'
+
+jobs:
+  build-and-smoke-test:
+    name: Backend Matrix (${{ matrix.site_target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site_target: [zambia, malawi, kenya]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install test dependencies
+        run: |
+          pip install -r backend/api/requirements.txt
+
+      - name: Run Python unit and smoke tests
+        env:
+          SITE_TARGET: ${{ matrix.site_target }}
+          ALLOW_DISCONNECTED_HEALTH: '1'
+        run: |
+          pytest backend/api/tests/ -v
+
+      - name: Build Docker image for ${{ matrix.site_target }}
+        run: |
+          docker build \
+            --build-arg SITE_TARGET=${{ matrix.site_target }} \
+            -t credit-backend-api:${{ matrix.site_target }} \
+            -f backend/api/Dockerfile .
+
+      - name: Boot local Docker Compose stack for ${{ matrix.site_target }}
+        env:
+          SITE_TARGET: ${{ matrix.site_target }}
+        run: |
+          docker compose --profile ${{ matrix.site_target }} up -d --build
+
+      - name: Verify backend/api /health returns HTTP 200
+        run: |
+          echo "Polling http://localhost:4000/health..."
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/health || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "[PASS] Health check returned 200 OK for ${{ matrix.site_target }}!"
+              curl -s http://localhost:4000/health
+              exit 0
+            fi
+            echo "Waiting for backend ($i/30)... status was $STATUS"
+            sleep 1
+          done
+          echo "::error::Backend failed to return 200 within 30s"
+          docker compose logs backend-api
+          exit 1
+
+      - name: Clean up containers
+        if: always()
+        run: |
+          docker compose down -v
+

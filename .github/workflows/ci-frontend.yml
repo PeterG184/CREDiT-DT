@@ -1,0 +1,55 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - prod
+    paths:
+      - 'frontend/**'
+      - 'config/sites/**'
+      - 'package.json'
+      - '.github/workflows/ci-frontend.yml'
+
+jobs:
+  frontend-matrix:
+    name: Frontend Matrix (${{ matrix.site_target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        site_target: [zambia, malawi, kenya]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: TypeScript Type Check
+        run: |
+          npm run typecheck --prefix frontend
+
+      - name: Run Jest Smoke Test Suite
+        env:
+          EXPO_PUBLIC_SITE_TARGET: ${{ matrix.site_target }}
+        run: |
+          npm run test --prefix frontend -- --ci
+
+      - name: Verify Static Web Export Compiles Cleanly
+        env:
+          EXPO_PUBLIC_SITE_TARGET: ${{ matrix.site_target }}
+        run: |
+          echo "Compiling static web bundle for ${{ matrix.site_target }}..."
+          npm run build:web --prefix frontend
+          test -f frontend/dist/index.html
+          echo "[PASS] Static web bundle compiled successfully for ${{ matrix.site_target }}."
+

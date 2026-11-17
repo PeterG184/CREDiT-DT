@@ -1,0 +1,80 @@
+# Node & Frontend dependencies
+node_modules/
+.npm/
+package-lock.json.log
+
+# Expo & Metro
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Native build folders
+ios/
+android/
+
+# Python & Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Linters
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# BentoML
+.bentoml/
+bentoml/
+models/*/bentos/
+models/*/bento/
+
+# Database & Migration runner
+database/schema.sql.bak
+.dbmate
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# OS Caches & IDEs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volume data (if locally mounted)
+pgdata/
+

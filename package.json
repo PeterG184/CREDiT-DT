@@ -1,0 +1,30 @@
+{
+  "name": "credit-digital-twin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Digital Twin Cloud Platform for Multi-Site Solar Microgrids (Zambia, Malawi, Kenya)",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "dev:malawi": "SITE_TARGET=malawi bash scripts/dev.sh",
+    "dev:kenya": "SITE_TARGET=kenya bash scripts/dev.sh",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f",
+    "db:migrate": "docker compose run --rm migration-runner up",
+    "db:rollback": "docker compose run --rm migration-runner rollback",
+    "db:status": "docker compose run --rm migration-runner status",
+    "db:new": "docker compose run --rm migration-runner new",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "npm run test --prefix frontend",
+    "test:backend": "pytest backend/api/tests/ -v",
+    "typecheck": "npm run typecheck --prefix frontend",
+    "build:web": "npm run build:web --prefix frontend"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
+

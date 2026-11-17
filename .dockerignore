@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Node & Frontend
+node_modules
+frontend
+.expo
+dist
+web-build
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+env
+venv
+.pytest_cache
+
+# Environment
+.env
+.env.*
+
+# BentoML
+.bentoml
+models/*/bentos
+
+# Documentation & IDE
+*.md
+.idea
+.vscode
+
